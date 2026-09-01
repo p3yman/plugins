@@ -1,5 +1,5 @@
 {
-  "name": "dock",
+  "name": "p3yman",
   "owner": {
     "name": "p3yman"
   },
@@ -10,5 +10,5 @@
       "description": "Ship a Linear issue or a task prompt to a reviewed PR, plus a shared pool of research and review agents."
     }
   ],
-  "description": "Workflows that take work from an issue or a prompt to a reviewed PR, backed by a shared pool of research and review agents."
+  "description": "p3yman's Claude Code plugins."
 }

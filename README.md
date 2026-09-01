@@ -9,7 +9,7 @@ one shared pool of agents.
 
 ```
 claude plugin marketplace add p3yman/dock
-claude plugin install dock@dock
+claude plugin install dock@p3yman
 ```
 
 ## Skills
