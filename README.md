@@ -2,7 +2,8 @@
 
 A Claude Code plugin. Shapes an idea into an issue, takes an issue through research,
 planning, implementation and review to one PR, explains the code you have to work in, and
-sweeps for the problems scoped work never surfaces — all off one shared pool of agents.
+sweeps for the problems scoped work never surfaces, and keeps dependencies moving — all off
+one shared pool of agents.
 
 ## Install
 
@@ -71,9 +72,10 @@ Finds the problems that scoped work never flags *because they are correctly out 
 a PR review ignores everything outside its diff, and `/dock:issue` parks tangents under Open
 Questions. This is the pass that looks at the whole.
 
-Six dimensions, fanned out in parallel: security, data access, architecture, test value, dead
-code, dependencies. Ask it whenever it feels like time — there is no schedule and no due
-date, and it does not track when it last ran.
+Five dimensions, fanned out in parallel: security, data access, architecture, test value,
+dead code. Ask it whenever it feels like time — there is no schedule and no due date, and it
+does not track when it last ran. Dependencies are not a dimension; `/dock:upgrade` covers
+that ground properly.
 
 **It writes nothing to the repo.** A stale audit record is worse than none, because a later
 agent reads it as current truth. The report is ephemeral and the only durable output is a
@@ -82,9 +84,24 @@ listed as tracked rather than re-reported, and findings you didn't file are supp
 back next time.
 
 Every finding has to name a concrete failure or a concrete cost. Test value is judged, not
-counted — coverage is an input that says where to look, never the finding itself. And
-dependencies reports status and risk only; working out which breaking changes hit your code
-belongs in `/dock:issue upgrade <thing>`, when you actually decide to do it.
+counted — coverage is an input that says where to look, never the finding itself.
+
+### `/dock:upgrade [composer | npm | frontend | backend | <package>]`
+
+Raises dependencies in a named scope and keeps the suite green. Not a `/dock:ship` plan,
+because an upgrade cannot be planned in advance — the breakage is only discoverable by doing
+it.
+
+It runs the tests *before* touching anything, and stops if they are already red, since no
+regression is detectable against a broken baseline. It writes no tests during the run: a test
+written now covers code you just changed, so it proves nothing. Minors and patches go in one
+batch. Every major goes on its own, with its own test run and its own commit.
+
+Risk analysis runs on majors only. `web-researcher` reads the release notes in parallel, then
+the bare names they mention — `Class::method()` in the notes is `$object->method()` in your
+code — are searched across your source, excluding vendored directories. You approve the set
+of majors in one round, not one question per package. A major that breaks reverts its own
+manifest and lock and the run continues to the next.
 
 ## Agents
 

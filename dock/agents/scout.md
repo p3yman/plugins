@@ -31,6 +31,7 @@ Prefer a composite script the project already defines over a command you assembl
 
 ### Commands
 - Base branch:
+- Install dependencies:
 - Fast check (diff-scoped, safe to run repeatedly):
 - Full gate (run once before a PR):
 - Lint / format:

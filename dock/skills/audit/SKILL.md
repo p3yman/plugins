@@ -9,6 +9,8 @@ disable-model-invocation: true
 
 Find the problems that scoped work never flags **because they are correctly out of scope**. A PR review ignores everything outside its diff; `/dock:issue` parks tangents under Open Questions. Both are right to. This is the pass that looks at the whole.
 
+Dependencies are not one of the dimensions — `/dock:upgrade` covers that ground properly.
+
 ## Two hard rules
 
 **Write nothing to the repo.** No audit file, no findings doc, no `.dock/` directory. A stale audit record is worse than none — a later agent reads it as current truth and is misled by a problem that was fixed months ago. The report lives in this conversation; the only durable output is a Linear issue.
@@ -22,10 +24,13 @@ If `$ARGUMENTS` names what to look for, use it and skip the questions.
 Otherwise ask both at once with `AskUserQuestion`:
 
 **What to look for** (multi-select):
-- Security & data access
+- Security
+- Data access
 - Architecture & dead code
 - Test value
-- Dependencies
+
+Dependencies are deliberately not here — `/dock:upgrade` surveys them properly, checking
+breaking changes against your actual code rather than just reporting version distance.
 
 **Where**: whole project *(recommended for a first run)* / a named module or directory / only what changed recently.
 
@@ -48,12 +53,10 @@ One agent per selected dimension, all in one message, each with a brief naming t
 | Architecture | `dock:analyzer` + `dock:pattern-finder` | layering violations, circular deps, classes doing several jobs, two implementations of one rule |
 | Test value | `dock:analyzer` | tests that cannot fail, tests asserting on mocks, critical paths with no test, skips older than a few months, suites that have never gone red |
 | Dead code | `dock:analyzer` *(reverse direction)* | unreferenced code, flags never flipped, commented-out blocks, endpoints nothing calls |
-| Dependencies | `dock:web-researcher` + `dock:scout` | how far behind, unmaintained packages, known CVEs |
 
-Notes on two of them:
+Two notes:
 
-- **Test value is not coverage.** Run the coverage report if one is configured, but as *input* — it says where to look, it is not the finding. Ninety percent coverage with assertions that cannot fail is worse than sixty with real ones, because it lies. Uncovered trivial code is not a finding; uncovered payment logic is.
-- **Dependencies reports status and risk only** — how far behind, still maintained, any CVEs. It does **not** produce an upgrade plan. Working out which breaking changes hit your code is expensive, goes stale immediately, and belongs in `/dock:issue upgrade <thing>` when you actually decide to do it.
+**Test value is not coverage.** Run the coverage report if one is configured, but as *input* — it says where to look, it is not the finding. Ninety percent coverage with assertions that cannot fail is worse than sixty with real ones, because it lies. Uncovered trivial code is not a finding; uncovered payment logic is. This is the opposite of the rule in `/dock:upgrade`, which treats any test as a valid baseline signal — different job, different rule.
 
 Dead code is the natural use of `dock:analyzer`'s reverse direction: nothing referencing it is exactly the question that agent answers, and it is also why "delete this" needs care — check git history before calling something dead, since code can look unused and still be load-bearing.
 
