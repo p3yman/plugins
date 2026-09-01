@@ -5,6 +5,7 @@
 | | |
 |---|---|
 | Slug | `{YYYY-MM-DD}-{slug}` |
+| Mode | `full` / `quick` |
 | Issue | `{KEY}` / none |
 | Repo | `{path}` |
 | Base branch | `{base}` |
@@ -27,6 +28,10 @@ One paragraph. What is true after this ships that isn't true now.
 ## Out of Scope
 
 - Named explicitly, so scope creep has something to bounce off.
+
+## Notes (quick mode only)
+
+What changed and any decision made, since there is no `plan.md` to hold it.
 
 ## Source
 

@@ -36,7 +36,7 @@ supports, list the rest as assumptions, file it.
 Work lands in the same `~/.claude/tmp/{date}-{slug}/` folder `/dock:ship` uses, so shipping
 the issue afterwards reuses the research instead of redoing it.
 
-### `/dock:ship <ISSUE-KEY | task description> [--ask] [--no-worktree]`
+### `/dock:ship <ISSUE-KEY | task description> [--ask] [--quick] [--no-worktree]`
 
 Runs the whole pipeline in one invocation:
 
@@ -56,6 +56,12 @@ prompt, `task.md` is the only record.
 `--ask` surfaces questions that neither the planner nor the validator could settle from the
 code, at the one point where answering them is still cheap — after the plan exists, before
 any code does. If nothing is unresolved it asks nothing.
+
+`--quick` is for a task you have already judged small and clear: one obvious change in code the
+task names. It skips research, `plan.md` and plan validation, and goes straight from `task.md`
+to implementation, keeping the independent review, the gate and the PR. If the change turns out
+to be bigger than one or two commits, the run stops with the verified work committed and tells
+you to re-run without the flag, which resumes as a full run on the same folder.
 
 ### `/dock:explain <path | symbol | question>`
 

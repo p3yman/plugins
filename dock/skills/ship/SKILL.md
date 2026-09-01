@@ -1,7 +1,7 @@
 ---
 name: ship
 description: Drive one Linear issue or one task prompt from research through plan, validation, implementation and review to a single PR. Explicit invocation only.
-argument-hint: <ISSUE-KEY | task description> [--ask] [--no-worktree]
+argument-hint: <ISSUE-KEY | task description> [--ask] [--quick] [--no-worktree]
 disable-model-invocation: true
 ---
 
@@ -10,6 +10,8 @@ disable-model-invocation: true
 Deliver **$ARGUMENTS** as one PR.
 
 You own the pipeline **and you write the code**. Subagents exist for work that reads far more than it writes, and for the two independent-angle passes. The pipeline runs straight through to the PR; only three things stop it — the `--ask` checkpoint, a genuine blocker, or a budget ceiling.
+
+`--quick` is the short form for a task the user has already judged small and clear: it skips research, the plan file and plan validation, but keeps the DoD, the independent review, the gate and the PR. See **Quick mode** below.
 
 ## Task folder
 
@@ -38,11 +40,34 @@ Delegate a phase only when: the plan marks phases independent with disjoint file
 
 While implementing, reach for `dock:analyzer` on an unfamiliar path, `dock:pattern-finder` before writing code that should match a local convention, `dock:error-analyzer` when a check fails cryptically.
 
+## Quick mode (`--quick`)
+
+The user is saying: this is one obvious change, in code the task already names, and it does not need a plan. Take that as a decision, not a hint. The pipeline's quality comes from three things — a checkable DoD, an independent review, and the gate — and none of them depends on research or a plan file, so quick mode keeps all three and drops everything that exists to serve multi-phase work.
+
+| Step | Quick mode |
+|---|---|
+| 0 Resume | Same. `task.md` records `Mode: quick`; a quick folder has no `plan.md`, so resume state is the commit log and the PR, not checkboxes. |
+| 1 Frame | Same. The DoD is what the reviewer reviews against — it is not optional here. Scout still runs; it is cheap and parallel. |
+| 2 Worktree | Same. |
+| 3 Research | **Skipped.** No `research.md`. One or two greps in-thread replace the fan-out. |
+| 4 Plan | **Skipped.** No `plan.md`. |
+| 5 Validate | **Skipped.** |
+| 6 Checkpoint | **Skipped.** `--ask` has nothing to gate without a plan; if both flags are given, `--quick` wins and say so in the report. |
+| 7 Implement | You, in this thread, always. One commit unless the change is naturally two. Record what changed and any decision made under a `Notes` heading in `task.md`, since there is no plan to hold it. |
+| 8 Review | Same. This is the one Fable pass quick mode keeps, and on a small diff it is fast. |
+| 9–11 | Same. |
+
+**Bail-out.** Quick mode is a judgment about size, and the judgment can be wrong. Stop and tell the user this needs a full run when implementing turns into a **third distinct change**, touches code the task never named and you did not expect, or needs a design decision the DoD does not settle. Commit what is verified first, leave the worktree in place, and say what you found. Re-running without `--quick` on the same folder is then a resume: Step 0 sees the commits, Step 3 onward runs normally and the plan accounts for the work already done. Do not push through — the whole point of the flag is that it is cheap to be wrong about.
+
+Quick mode reports the same way as a full run. Spawn count and elapsed time are how the user learns whether the flag is paying off.
+
 ## Step 0 — Resume or clean up
 
 If a folder for this task already exists under `~/.claude/tmp/`, this is a resume. Look it up by issue key as well as by slug — `/dock:issue` creates a folder under the idea's slug and records the key it filed. Read `task.md` for the manifest, then `plan.md`.
 
 A folder from `/dock:issue` that has `research.md` and `shaping.md` but no `plan.md` is not a resume — it is a **handoff**. The investigation is already done: read it, skip Step 3, and start at Step 4.
+
+A folder whose `task.md` says `Mode: quick` has no `plan.md` by design. Its state is `git log --oneline {base}..HEAD` and the PR field: commits and no PR → continue from Step 8; PR recorded → the merged/open check above, as usual. If this run was invoked *without* `--quick` on a quick folder, that is the bail-out path — treat the commits as work already done and run Step 3 onward.
 
 - A PR is recorded → `gh pr view <n> --json state,mergedAt`.
   - **Merged** → move Linear to done, post the closing comment, `ExitWorktree({action:"keep"})` if inside, remove the worktree and the branch if fully merged, archive the folder to `~/.claude/tmp/_done/`, tell the user, stop.
@@ -53,7 +78,7 @@ Otherwise this is a fresh run. Continue.
 
 ## Step 1 — Frame the task
 
-Slug from the issue title or the prompt. Create the folder; write `task.md` from `templates/task.md`.
+Slug from the issue title or the prompt. Create the folder; write `task.md` from `templates/task.md`. Set `Mode` in the manifest to `quick` or `full`.
 
 - `$ARGUMENTS` matches `[A-Z]+-\d+` → fetch the issue with `linearis` (see the `linearis` skill for commands). Body verbatim into `task.md`, its acceptance criteria as the DoD.
 - Otherwise the prompt *is* the task; write goal and DoD yourself.
@@ -82,7 +107,7 @@ Before running the project's gate for the first time in a new worktree, read the
 
 **Inspect the repo before asking the user anything.**
 
-Skip research only when the task is a single obvious phase in code `task.md` already names. It earns its cost at three or more phases, or whenever the same context would otherwise be read twice.
+Skipped entirely under `--quick`. Otherwise, skip research only when the task is a single obvious phase in code `task.md` already names. It earns its cost at three or more phases, or whenever the same context would otherwise be read twice.
 
 Fan out in parallel — one message, one scoped brief each:
 
@@ -99,6 +124,8 @@ For a bug, `dock:error-analyzer` replaces the locate/analyze pair — the resear
 Collect the results into `research.md` from `templates/research.md`. Keep the file:line references; they are what make the plan implementable without re-exploration.
 
 ## Step 4 — Plan
+
+Skipped under `--quick` — go to Step 7.
 
 Write `plan.md` from `templates/plan.md`, referencing `research.md`.
 
@@ -117,9 +144,11 @@ Spawn **`dock:plan-validator`** with the paths to `task.md`, `research.md`, `pla
 
 **You apply the fixes yourself.** Editing the plan is cheap text work and you own the document.
 
-Skip validation only when the plan has two or fewer phases and no open questions.
+Skipped under `--quick`. Otherwise, skip validation only when the plan has two or fewer phases and no open questions.
 
 ## Step 6 — Checkpoint (`--ask` only)
+
+Skipped under `--quick`, even if `--ask` is also given.
 
 Only questions that survived **both** the plan pass and validation reach the user. Two models already failed to settle them from repo evidence — that is the bar.
 
@@ -136,6 +165,8 @@ Answers go into that phase's `Implementation Decisions`. Record `Checkpoint: pas
 The exception holds in both modes: if proceeding either way would produce work that is wrong if the guess is wrong, stop and ask.
 
 ## Step 7 — Implement
+
+Under `--quick` there is one phase, described by `task.md`: implement it in-thread, verify with the fast check, commit, write a `Notes` block in `task.md`, and watch for the bail-out conditions in **Quick mode**. Then Step 8.
 
 Per phase, in plan order — parallel only where the plan says the phases are independent with disjoint files:
 
@@ -163,7 +194,7 @@ If a delegated agent had to go exploring, the plan was underspecified. Say so in
 
 Spawn **`dock:reviewer`** on the accumulated diff against the DoD, **before the PR exists**. A review after the PR opens produces fixup commits on something a human may already be reading.
 
-Give it: `{base}..HEAD` (or the diff), the DoD from `task.md`, and `plan.md`. It reports; it does not edit.
+Give it: `{base}..HEAD` (or the diff), the DoD from `task.md`, and `plan.md` (or, under `--quick`, the `Notes` from `task.md`). It reports; it does not edit.
 
 Fix what it finds. A finding in code a delegated agent wrote goes back **to that agent** via `SendMessage` — it still holds the context. Spawn fresh only when the finding names a file this run never touched; an agent with no working memory will spend its whole budget re-reading the diff and produce nothing.
 
@@ -185,7 +216,7 @@ Spawn **`dock:pr`** with base branch, head branch, the DoD, a summary of what sh
 
 `ExitWorktree({action:"keep"})`. **Keep the worktree and the task folder** — the PR isn't merged, and review comments are coming.
 
-Tell the user: PR link, phases completed, assumptions made, anything left unmet, how many subagents ran and roughly how long it took, and which ceiling stopped the run if one did. Note that merging the PR and re-running `/dock:ship` moves the issue to done and cleans up.
+Tell the user: PR link, mode, phases completed, assumptions made, anything left unmet, how many subagents ran and roughly how long it took, and which ceiling stopped the run if one did. Note that merging the PR and re-running `/dock:ship` moves the issue to done and cleans up.
 
 Spawn count and elapsed time are the only signal the user gets that a plan was mis-sized. Report them plainly.
 
@@ -193,7 +224,7 @@ Spawn count and elapsed time are the only signal the user gets that a plan was m
 
 Hitting **any** of these ends the run with a report. None is satisfied by "but I'm nearly done":
 
-- **Phases** — running past roughly double the plan's phase count. Re-plan; don't push through.
+- **Phases** — running past roughly double the plan's phase count. Re-plan; don't push through. Under `--quick` this is the bail-out: a third distinct change ends the run.
 - **Spawns** — more than one per delegated phase (a second is a resume, a third is thrash), plus research, validation, review, and PR.
 - **Wall clock** — ~90 minutes from Step 1. Check it at three points: before the review pass, before the full gate, and after every round-trip chasing a gate failure. That last one is the one that actually gets skipped, because a regression hunt always feels close to done.
 - **Green** — Step 9. No exceptions at all.
