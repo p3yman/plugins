@@ -1,8 +1,8 @@
 # dock
 
 A Claude Code plugin. Shapes an idea into an issue, takes an issue through research,
-planning, implementation and review to one PR, and explains the code you have to work in —
-all off one shared pool of agents.
+planning, implementation and review to one PR, explains the code you have to work in, and
+sweeps for the problems scoped work never surfaces — all off one shared pool of agents.
 
 ## Install
 
@@ -64,6 +64,27 @@ works, what depends on it, why it is like that, and where to start reading.
 It picks a depth first and tells you which — a specific function gets read directly, because
 spawning three agents to explain a helper is worse than just opening it. Only "why is this
 like this" questions pay for the history pass.
+
+### `/dock:audit [what to look for] [where]`
+
+Finds the problems that scoped work never flags *because they are correctly out of scope* —
+a PR review ignores everything outside its diff, and `/dock:issue` parks tangents under Open
+Questions. This is the pass that looks at the whole.
+
+Six dimensions, fanned out in parallel: security, data access, architecture, test value, dead
+code, dependencies. Ask it whenever it feels like time — there is no schedule and no due
+date, and it does not track when it last ran.
+
+**It writes nothing to the repo.** A stale audit record is worse than none, because a later
+agent reads it as current truth. The report is ephemeral and the only durable output is a
+Linear issue. Memory lives in Linear instead: findings already covered by an open issue are
+listed as tracked rather than re-reported, and findings you didn't file are supposed to come
+back next time.
+
+Every finding has to name a concrete failure or a concrete cost. Test value is judged, not
+counted — coverage is an input that says where to look, never the finding itself. And
+dependencies reports status and risk only; working out which breaking changes hit your code
+belongs in `/dock:issue upgrade <thing>`, when you actually decide to do it.
 
 ## Agents
 
