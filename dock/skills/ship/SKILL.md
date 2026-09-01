@@ -40,7 +40,9 @@ While implementing, reach for `dock:analyzer` on an unfamiliar path, `dock:patte
 
 ## Step 0 — Resume or clean up
 
-If a folder for this task already exists under `~/.claude/tmp/`, this is a resume. Read `task.md` for the manifest, then `plan.md`.
+If a folder for this task already exists under `~/.claude/tmp/`, this is a resume. Look it up by issue key as well as by slug — `/dock:issue` creates a folder under the idea's slug and records the key it filed. Read `task.md` for the manifest, then `plan.md`.
+
+A folder from `/dock:issue` that has `research.md` and `shaping.md` but no `plan.md` is not a resume — it is a **handoff**. The investigation is already done: read it, skip Step 3, and start at Step 4.
 
 - A PR is recorded → `gh pr view <n> --json state,mergedAt`.
   - **Merged** → move Linear to done, post the closing comment, `ExitWorktree({action:"keep"})` if inside, remove the worktree and the branch if fully merged, archive the folder to `~/.claude/tmp/_done/`, tell the user, stop.
