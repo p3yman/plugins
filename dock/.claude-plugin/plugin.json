@@ -1,0 +1,8 @@
+{
+  "name": "dock",
+  "description": "Workflows that take work from an issue or a prompt through research, planning, implementation and review to one PR, backed by a shared pool of research and review agents.",
+  "version": "0.1.0",
+  "author": {
+    "name": "p3yman"
+  }
+}
