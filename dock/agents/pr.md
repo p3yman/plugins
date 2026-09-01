@@ -46,7 +46,14 @@ Decisions made without confirmation, where a different answer would have changed
 ## Risk
 
 What to watch after merge, and anything the tests do not cover.
+
+---
+Working notes: `<task folder path>`
 ```
+
+Include the working-notes line whenever the brief gives you a folder path. It is what lets a
+later session answer "why was this done this way" from the recorded decisions instead of
+re-deriving them from the diff.
 
 Carry unmet criteria and assumptions through exactly as given. Never quietly upgrade an unmet criterion to met, and never drop an assumption because it makes the PR read better — those two lines are the most valuable part of the description.
 

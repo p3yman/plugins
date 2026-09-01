@@ -177,7 +177,7 @@ Run the full gate from the manifest **once**, then push. Record the SHA it passe
 
 ## Step 10 — PR
 
-Spawn **`dock:pr`** with base branch, head branch, the DoD, a summary of what shipped, the assumptions recorded in Step 6, any deviations, and verification results. It writes and opens the PR and returns the URL.
+Spawn **`dock:pr`** with base branch, head branch, the DoD, a summary of what shipped, the assumptions recorded in Step 6, any deviations, verification results, and **the task folder path** — so a later session can answer "why was this done this way" from the recorded decisions rather than the diff. It writes and opens the PR and returns the URL.
 
 **Never merge it.** Record the URL in `task.md`. Move Linear to its review/preview state.
 
