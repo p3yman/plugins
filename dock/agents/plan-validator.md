@@ -2,7 +2,7 @@
 name: plan-validator
 description: Pressure-tests an implementation plan against its stated goal and the real codebase, and reports holes, wrong assumptions and missing verification. Reports only, never edits. Invoked with document paths by an orchestrating skill.
 tools: Read, Grep, Glob, Bash
-model: opus
+model: fable
 effort: high
 maxTurns: 50
 color: yellow

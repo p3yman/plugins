@@ -46,7 +46,7 @@ which skill called it — so they work inside a skill, inside another skill, or 
 | `dock:web-researcher` | Sonnet | External docs, APIs and versions, with citations |
 | `dock:error-analyzer` | Opus | Failure → root cause → scoped fix |
 | `dock:scout` | Sonnet | How a given repo builds, verifies and tests |
-| `dock:plan-validator` | Opus | Pressure-tests a plan before any code exists |
+| `dock:plan-validator` | Fable | Pressure-tests a plan before any code exists |
 | `dock:implementer` | Opus | One specified unit of work, verified and committed |
 | `dock:reviewer` | Fable | Reviews a finished change, including whether it's the *right* fix |
 | `dock:pr` | Sonnet | Writes and opens the PR |

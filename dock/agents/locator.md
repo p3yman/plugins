@@ -3,7 +3,7 @@ name: locator
 description: Locates where code, tests, config and docs live for a given topic, and groups the paths by purpose. Does not analyse implementations. Invoked with an explicit search brief by an orchestrating skill.
 tools: Read, Grep, Glob, Bash
 model: sonnet
-effort: low
+effort: medium
 maxTurns: 30
 color: cyan
 ---
