@@ -1,7 +1,8 @@
 # dock
 
-A Claude Code plugin. Takes a task from an issue or a prompt through research, planning,
-implementation and review, and lands it as one PR.
+A Claude Code plugin. Shapes an idea into an issue, takes an issue through research,
+planning, implementation and review to one PR, and explains the code you have to work in —
+all off one shared pool of agents.
 
 ## Install
 
@@ -11,6 +12,28 @@ claude plugin install dock@dock
 ```
 
 ## Skills
+
+### `/dock:issue <idea | ISSUE-KEY> [--quick]`
+
+Shapes a rough idea, or an existing one-line ticket, into an issue `/dock:ship` can pick up
+without asking anything.
+
+It is a **design conversation, not a viability review** — the premise is that the thing is
+happening, so every question exists to shape *how*, never to litigate *whether*. The issue's
+own sections are the slots, and it is done when every slot is filled and none contradicts
+another. Not a question count.
+
+It investigates the code before asking anything and only asks what the code cannot answer,
+shows the whole form each round so you can stop early with something usable, resolves
+contradictions by offering designs rather than asking you to defend a position, and never
+re-asks something you already answered — a slot still empty after two rounds gets a proposed
+default and is recorded as an assumption.
+
+`--quick` is the same form with asking switched off: investigate, fill what the code
+supports, list the rest as assumptions, file it.
+
+Work lands in the same `~/.claude/tmp/{date}-{slug}/` folder `/dock:ship` uses, so shipping
+the issue afterwards reuses the research instead of redoing it.
 
 ### `/dock:ship <ISSUE-KEY | task description> [--ask] [--no-worktree]`
 
@@ -33,6 +56,15 @@ prompt, `task.md` is the only record.
 code, at the one point where answering them is still cheap — after the plan exists, before
 any code does. If nothing is unresolved it asks nothing.
 
+### `/dock:explain <path | symbol | question>`
+
+Fans agents out in parallel over an unfamiliar subsystem and returns one answer: how it
+works, what depends on it, why it is like that, and where to start reading.
+
+It picks a depth first and tells you which — a specific function gets read directly, because
+spawning three agents to explain a helper is worse than just opening it. Only "why is this
+like this" questions pay for the history pass.
+
 ## Agents
 
 Every agent is a function of its prompt. None of them knows about a task folder, a plan, or
@@ -41,10 +73,10 @@ which skill called it — so they work inside a skill, inside another skill, or 
 | Agent | Model | Purpose |
 |---|---|---|
 | `dock:locator` | Sonnet | Where code, tests, config and docs live |
-| `dock:analyzer` | Sonnet | How existing code works, with file:line |
+| `dock:analyzer` | Sonnet | How existing code works, and what depends on it, with file:line |
 | `dock:pattern-finder` | Sonnet | Local precedent that new code should imitate |
 | `dock:web-researcher` | Sonnet | External docs, APIs and versions, with citations |
-| `dock:error-analyzer` | Opus | Failure → root cause → scoped fix |
+| `dock:error-analyzer` | Opus | Runs a failing check, or takes an error → root cause → scoped fix |
 | `dock:scout` | Sonnet | How a given repo builds, verifies and tests |
 | `dock:plan-validator` | Fable | Pressure-tests a plan before any code exists |
 | `dock:implementer` | Opus | One specified unit of work, verified and committed |
