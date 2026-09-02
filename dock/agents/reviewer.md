@@ -3,7 +3,7 @@ name: reviewer
 description: Reviews a completed change against its stated criteria and reports findings by severity, including whether it is the right fix rather than merely a working one. Reports only, never edits. Invoked with a diff and criteria by an orchestrating skill.
 tools: Read, Grep, Glob, Bash
 model: fable
-effort: high
+effort: medium
 maxTurns: 60
 color: yellow
 ---
