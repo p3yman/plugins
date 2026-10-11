@@ -134,7 +134,7 @@ Write `plan.md` from `templates/plan.md`, referencing `research.md`.
 - Every task must be concretely checkable. "Improve the UX" is a decision or a blocking question — never a task.
 - Do not invent exact line numbers research didn't find.
 - Size every phase (XS–XL). Size feeds the delegation rule in Step 7.
-- **Out of Scope is not optional.** It is the scope-creep guard.
+- **Out of Scope is not optional.** It is the scope-creep guard. It lists work the task never asked for. It never lists the consequences of the change itself (see the origin table in Step 8).
 
 For UI-facing work, load the `frontend-design` and `web-design-guidelines` skills before writing the plan, if they are available.
 
@@ -196,9 +196,19 @@ Spawn **`dock:reviewer`** on the accumulated diff against the DoD, **before the 
 
 Give it: `{base}..HEAD` (or the diff), the DoD from `task.md`, and `plan.md` (or, under `--quick`, the `Notes` from `task.md`). It reports; it does not edit.
 
-Fix what it finds. A finding in code a delegated agent wrote goes back **to that agent** via `SendMessage` — it still holds the context. Spawn fresh only when the finding names a file this run never touched; an agent with no working memory will spend its whole budget re-reading the diff and produce nothing.
+Every finding has an origin, and the origin decides what happens to it. Severity does not: a low-severity finding the diff caused is fixed in this PR like any other.
 
-**An unmet DoD bullet is never a follow-up.** Either fix it, or state it as unmet with the reason in the report and the PR body.
+| Origin | What it is | What happens |
+|---|---|---|
+| **caused** | This diff created it: code, fields, props or queries the change leaves unread; fixtures, stories, tests, types or docs the change makes stale or redundant; a behaviour the change half-finishes | Fixed in this PR, before the gate. |
+| **decision** | A separate product or design question the change exposes, which the DoD does not settle and which a reasonable person could answer either way | Filed as its own Linear issue (parent = this issue) before the PR opens, and linked from the PR body. With no issue tracker, it is asked as a question in the report. |
+| **pre-existing** | Already wrong on the base branch, in code the task did not need to touch | Reported in the PR body. Filed as an issue if it is real. |
+
+The test for **caused**: would it exist if this diff were reverted? If not, it is this PR's work. "Out of Scope" in the plan cannot absorb it, because Out of Scope names work the task never asked for, not the consequences of the work it did.
+
+Fix what is **caused**. A finding in code a delegated agent wrote goes back **to that agent** via `SendMessage` — it still holds the context. Spawn fresh only when the finding names a file this run never touched; an agent with no working memory will spend its whole budget re-reading the diff and produce nothing.
+
+**An unmet DoD bullet is never a follow-up.** Either fix it, or state it as unmet with the reason in the report and the PR body. The same holds for a **caused** finding left unfixed: it is reported as unmet work, never listed as a follow-up or a note for the reviewer.
 
 ## Step 9 — Gate and push
 
@@ -216,7 +226,9 @@ Spawn **`dock:pr`** with base branch, head branch, the DoD, a summary of what sh
 
 `ExitWorktree({action:"keep"})`. **Keep the worktree and the task folder** — the PR isn't merged, and review comments are coming.
 
-Tell the user: PR link, mode, phases completed, assumptions made, anything left unmet, how many subagents ran and roughly how long it took, and which ceiling stopped the run if one did. Note that merging the PR and re-running `/dock:ship` moves the issue to done and cleans up.
+Tell the user: PR link, mode, phases completed, assumptions made, anything left unmet, how many subagents ran and roughly how long it took, and which ceiling stopped the run if one did.
+
+There is no general "remaining" or "found along the way" list. Everything not shipped is one of three things, and is reported as that: **unmet** (a DoD bullet or a caused finding, with the reason), **filed** (a decision, with its issue link), or **pre-existing** (with its issue link if one was filed). A sentence suggesting something "could be its own issue" means the issue was not filed, and that is the step that was skipped. Note that merging the PR and re-running `/dock:ship` moves the issue to done and cleans up.
 
 Spawn count and elapsed time are the only signal the user gets that a plan was mis-sized. Report them plainly.
 
@@ -231,6 +243,8 @@ Hitting **any** of these ends the run with a report. None is satisfied by "but I
 
 A ceiling ends the run cleanly with work pushed. It is not a blocker and it does not become a question.
 
+**A ceiling never changes what is in scope.** When the run is near or past a ceiling, the work that is left keeps its label: a caused finding stays caused, a DoD bullet stays a DoD bullet. Reclassifying it as out of scope, a follow-up or a reviewer note so the run can finish green is the failure this guard is most prone to, because it ends the run cleanly and hides the fact that it did. Either do the work, or stop and report it as **unmet** and name the ceiling as the reason. The user then decides whether to continue, which they cannot do if they never see it.
+
 Break early **for a blocker** only when a human decision is genuinely required: requirement ambiguity that would change the approach, a non-trivial merge conflict, or a gate failure you could not fix after a real attempt. Unfamiliar is not a blocker — that is what the research agents are for.
 
 ## Linear (only when there is an issue)
@@ -243,4 +257,4 @@ Workflow-state names vary by team — never hardcode one. Once per run, list the
 
 Only ever move an issue forward. Post **one** comment when the PR opens — link plus summary. Not a running log; `plan.md` is the log.
 
-Work discovered mid-run that is separately decidable becomes its own Linear issue with a parent, linked from that comment. Not a sentence saying it "wants its own issue."
+Work discovered mid-run that is separately decidable (a **decision** in Step 8's terms) becomes its own Linear issue with a parent, filed before the PR opens and linked from that comment and the PR body. Not a sentence saying it "wants its own issue." Work the diff itself caused is never filed: it is fixed in the PR.

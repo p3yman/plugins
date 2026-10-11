@@ -35,7 +35,7 @@ Findings first, most severe first, each anchored to `path:line`.
 Ready / ready with fixes / not ready — one line of why.
 
 ### Findings
-- **<severity>: <finding>** — path:line
+- **<severity> · <origin>: <finding>** — path:line
   What breaks, and under what input or state. What to change.
 
 ### Criteria
@@ -44,6 +44,14 @@ Ready / ready with fixes / not ready — one line of why.
 ### Residual risk
 What this change could still break that neither the diff nor the tests would reveal.
 ```
+
+Every finding carries an **origin**, separate from its severity:
+
+- **caused** — this diff created it. Ask: would it exist if the diff were reverted? Code, fields or queries the change leaves unread, and fixtures, stories, tests, types or docs it makes stale or redundant, are caused, however minor.
+- **decision** — a separate product or design question the change exposes and the criteria do not settle. Say what the question is and what the options are.
+- **pre-existing** — already wrong on the base branch, in code the change did not need to touch.
+
+The caller fixes every caused finding in the same PR, whatever its severity, so never describe one as out of scope, a follow-up or a note for later. Severity says how much it matters. Origin says whose work it is.
 
 Every finding needs a concrete failure: the input or state, and the wrong result. If you cannot describe how it fails, it is a preference, not a finding — leave it out.
 
