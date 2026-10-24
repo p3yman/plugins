@@ -36,7 +36,7 @@ supports, list the rest as assumptions, file it.
 Work lands in the same `~/.claude/tmp/{date}-{slug}/` folder `/dock:ship` uses, so shipping
 the issue afterwards reuses the research instead of redoing it.
 
-### `/dock:ship <ISSUE-KEY | task description> [--ask] [--quick] [--review=fable|sol|astra | --no-review] [--no-worktree]`
+### `/dock:ship <ISSUE-KEY | task description> [--ask] [--quick] [--review=fable|sol|astra[:effort] | --no-review] [--no-worktree]`
 
 Runs the whole pipeline in one invocation:
 
@@ -63,13 +63,33 @@ to implementation, keeping the independent review, the gate and the PR. If the c
 to be bigger than one or two commits, the run stops with the verified work committed and tells
 you to re-run without the flag, which resumes as a full run on the same folder.
 
-`--review=<who>` picks who runs the two independent passes, plan validation and the final
-review: `fable` (the Claude subagents), or `sol` / `astra` (Codex, `gpt-6.1-sol` /
-`gpt-6-astra`, run read-only through `codex exec` with the same prompts). Use it to spend
-whichever quota has room. `--no-review` skips both; the orchestrator checks the diff against
-the DoD itself, still fixes anything the diff caused, and the PR body says no independent
-review ran. With neither flag, the run asks once and records the answer in `task.md`, so a
-resume doesn't ask again.
+`--review=<who>[:<effort>]` picks who runs the two independent passes, plan validation and
+the final review, and how hard it thinks:
+
+| `<who>` | Runs on |
+|---|---|
+| `fable` | The Claude subagents, `dock:plan-validator` and `dock:reviewer` |
+| `sol` | Codex, `gpt-6.1-sol` — workhorse tier, run read-only through `codex exec` with the same prompts |
+| `astra` | Codex, `gpt-6-astra` — frontier tier, the closest match to Fable |
+
+`<effort>` is `low`, `medium`, `high`, `xhigh` or `max`, and defaults to `medium`. Codex runs
+on your ChatGPT login, so `sol` and `astra` spend your Codex plan limits, not API credit. Use
+the choice to spend whichever quota has room.
+
+`--no-review` skips both passes; the orchestrator checks the diff against the DoD itself,
+still fixes anything the diff caused, and the PR body says no independent review ran. With
+neither flag, the run asks once and records the answer in `task.md`, so a resume doesn't ask
+again. The PR body and the final report name the reviewer and effort that ran.
+
+```
+/dock:ship ENG-1234                               # asks which reviewer to use
+/dock:ship ENG-1234 --review=fable                # Fable at medium, the usual default
+/dock:ship ENG-1234 --review=astra                # Fable is out of quota: closest substitute
+/dock:ship ENG-1234 --review=sol:high             # cheaper model, thinking harder on a big plan
+/dock:ship ENG-1234 --review=fable:high           # a risky change worth the extra spend
+/dock:ship "fix the typo in the footer" --quick --review=sol:low
+/dock:ship "bump the lodash pin" --quick --no-review   # cheapest possible run
+```
 
 ### `/dock:explain <path | symbol | question>`
 

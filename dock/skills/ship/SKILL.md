@@ -1,7 +1,7 @@
 ---
 name: ship
 description: Drive one Linear issue or one task prompt from research through plan, validation, implementation and review to a single PR. Explicit invocation only.
-argument-hint: <ISSUE-KEY | task description> [--ask] [--quick] [--review=fable|sol|astra | --no-review] [--no-worktree]
+argument-hint: <ISSUE-KEY | task description> [--ask] [--quick] [--review=fable|sol|astra[:effort] | --no-review] [--no-worktree]
 disable-model-invocation: true
 ---
 
@@ -13,7 +13,7 @@ You own the pipeline **and you write the code**. Subagents exist for work that r
 
 `--quick` is the short form for a task the user has already judged small and clear: it skips research, the plan file and plan validation, but keeps the DoD, the independent review, the gate and the PR. See **Quick mode** below.
 
-`--review=fable|sol|astra` picks who runs the two independent-angle passes — plan validation and the final review: Fable as a subagent, or a Codex model through `codex exec`. `--no-review` (same as `--review=none`) skips both. Without either, the run asks once. See **Reviewer** below. Both combine with `--quick`.
+`--review=fable|sol|astra[:effort]` picks who runs the two independent-angle passes — plan validation and the final review: Fable as a subagent, or a Codex model through `codex exec`, optionally at a given effort (`--review=sol:high`; default medium). `--no-review` (same as `--review=none`) skips both. Without either, the run asks once. See **Reviewer** below. Both combine with `--quick`.
 
 ## Task folder
 
@@ -63,23 +63,25 @@ The user is saying: this is one obvious change, in code the task already names, 
 
 Quick mode reports the same way as a full run. Spawn count and elapsed time are how the user learns whether the flag is paying off.
 
-## Reviewer (`--review=<who>`, `--no-review`)
+## Reviewer (`--review=<who>[:<effort>]`, `--no-review`)
 
-One choice covers both independent-angle passes — plan validation (Step 5) and the final review (Step 8). The point of choosing is to spend whichever quota has room, so both passes go to the same reviewer.
+One choice covers both independent-angle passes — plan validation (Step 5) and the final review (Step 8). The point of choosing is to spend whichever quota has room, so both passes go to the same reviewer at the same effort.
+
+**Effort** is optional: `low`, `medium`, `high`, `xhigh` or `max`, default `medium`. `--review=sol:high` runs Sol at high; `--review=sol` runs it at medium. Anything else after the colon is a typo, not a guess to make — stop and ask. `none` takes no effort.
 
 | Value | Runs on | How |
 |---|---|---|
-| `fable` | Claude Fable | Spawn `dock:plan-validator` / `dock:reviewer` as written |
+| `fable` | Claude Fable | Spawn `dock:plan-validator` / `dock:reviewer`; pass `effort` on the spawn only when it isn't `medium`, since medium is what their frontmatter sets |
 | `sol` | Codex, `gpt-6.1-sol` | `codex exec`, see below |
 | `astra` | Codex, `gpt-6-astra` | `codex exec`, see below |
 | `none` (`--no-review`) | nobody | You do a self-check in-thread, see below |
 
-**Not given and not recorded → ask once**, in Step 1, with `AskUserQuestion` alongside the scout spawn: the four options above, `fable` first. This is the one question a run asks up front; it is a choice about spend, not about the task. Write the answer into `task.md` as `Review: <value>`. A resume reads it from there and never re-asks; a flag given on the resume overrides it.
+**Not given and not recorded → ask once**, in Step 1, with `AskUserQuestion` alongside the scout spawn: the four options above, `fable` first, all at medium — the user who wants another effort says so in the flag or via "Other". This is the one question a run asks up front; it is a choice about spend, not about the task. Write the answer into `task.md` as `Review: <who>:<effort>` (e.g. `sol:medium`), or `Review: none`. A resume reads it from there and never re-asks; a flag given on the resume overrides it.
 
-**Codex reviewers.** Same role, same brief, different runtime. Build one prompt file in the task folder: the body of the matching agent file in this plugin (`${CLAUDE_SKILL_DIR}/../../agents/plan-validator.md` or `reviewer.md`, frontmatter stripped), then the exact brief you would have given the subagent. Run it from the worktree, read-only, at the same medium effort the Fable agents use:
+**Codex reviewers.** Same role, same brief, different runtime. Build one prompt file in the task folder: the body of the matching agent file in this plugin (`${CLAUDE_SKILL_DIR}/../../agents/plan-validator.md` or `reviewer.md`, frontmatter stripped), then the exact brief you would have given the subagent. Run it from the worktree, read-only, at the recorded effort:
 
 ```
-codex exec -m <model> -c model_reasoning_effort="medium" -s read-only --ephemeral \
+codex exec -m <model> -c model_reasoning_effort="<effort>" -s read-only --ephemeral \
   -C <worktree> -o <task-folder>/<validation|review>.md - < <task-folder>/<prompt-file>
 ```
 
@@ -91,7 +93,7 @@ Run it in the background and wait for it to exit — a review can outlast a fore
 - **Step 8** — you do the pass in-thread: walk `{base}..HEAD` against every DoD bullet, and classify anything you find with the same origin table. Caused findings are still fixed in this PR. Be plain that this is a self-review: it catches unmet DoD bullets and leftovers, not the blind spots an independent reader exists to catch.
 - The PR body and the final report both state that no independent review ran, so the human reviewer knows they are the first second pair of eyes.
 
-Whichever reviewer ran, the PR body and the final report name it.
+Whichever reviewer ran, the PR body and the final report name it with its effort.
 
 ## Step 0 — Resume or clean up
 
