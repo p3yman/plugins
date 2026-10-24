@@ -36,7 +36,7 @@ supports, list the rest as assumptions, file it.
 Work lands in the same `~/.claude/tmp/{date}-{slug}/` folder `/dock:ship` uses, so shipping
 the issue afterwards reuses the research instead of redoing it.
 
-### `/dock:ship <ISSUE-KEY | task description> [--ask] [--quick] [--no-worktree]`
+### `/dock:ship <ISSUE-KEY | task description> [--ask] [--quick] [--review=fable|sol|astra | --no-review] [--no-worktree]`
 
 Runs the whole pipeline in one invocation:
 
@@ -62,6 +62,14 @@ task names. It skips research, `plan.md` and plan validation, and goes straight 
 to implementation, keeping the independent review, the gate and the PR. If the change turns out
 to be bigger than one or two commits, the run stops with the verified work committed and tells
 you to re-run without the flag, which resumes as a full run on the same folder.
+
+`--review=<who>` picks who runs the two independent passes, plan validation and the final
+review: `fable` (the Claude subagents), or `sol` / `astra` (Codex, `gpt-6.1-sol` /
+`gpt-6-astra`, run read-only through `codex exec` with the same prompts). Use it to spend
+whichever quota has room. `--no-review` skips both; the orchestrator checks the diff against
+the DoD itself, still fixes anything the diff caused, and the PR body says no independent
+review ran. With neither flag, the run asks once and records the answer in `task.md`, so a
+resume doesn't ask again.
 
 ### `/dock:explain <path | symbol | question>`
 
@@ -122,9 +130,9 @@ which skill called it — so they work inside a skill, inside another skill, or 
 | `dock:web-researcher` | Sonnet | External docs, APIs and versions, with citations |
 | `dock:error-analyzer` | Opus | Runs a failing check, or takes an error → root cause → scoped fix |
 | `dock:scout` | Sonnet | How a given repo builds, verifies and tests |
-| `dock:plan-validator` | Fable | Pressure-tests a plan before any code exists |
+| `dock:plan-validator` | Fable (or Codex via `--review`) | Pressure-tests a plan before any code exists |
 | `dock:implementer` | Opus | One specified unit of work, verified and committed |
-| `dock:reviewer` | Fable | Reviews a finished change, including whether it's the *right* fix |
+| `dock:reviewer` | Fable (or Codex via `--review`) | Reviews a finished change, including whether it's the *right* fix |
 | `dock:pr` | Sonnet | Writes and opens the PR |
 
 ## How it decides what to delegate

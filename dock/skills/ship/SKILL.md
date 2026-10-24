@@ -1,7 +1,7 @@
 ---
 name: ship
 description: Drive one Linear issue or one task prompt from research through plan, validation, implementation and review to a single PR. Explicit invocation only.
-argument-hint: <ISSUE-KEY | task description> [--ask] [--quick] [--no-worktree]
+argument-hint: <ISSUE-KEY | task description> [--ask] [--quick] [--review=fable|sol|astra | --no-review] [--no-worktree]
 disable-model-invocation: true
 ---
 
@@ -12,6 +12,8 @@ Deliver **$ARGUMENTS** as one PR.
 You own the pipeline **and you write the code**. Subagents exist for work that reads far more than it writes, and for the two independent-angle passes. The pipeline runs straight through to the PR; only three things stop it — the `--ask` checkpoint, a genuine blocker, or a budget ceiling.
 
 `--quick` is the short form for a task the user has already judged small and clear: it skips research, the plan file and plan validation, but keeps the DoD, the independent review, the gate and the PR. See **Quick mode** below.
+
+`--review=fable|sol|astra` picks who runs the two independent-angle passes — plan validation and the final review: Fable as a subagent, or a Codex model through `codex exec`. `--no-review` (same as `--review=none`) skips both. Without either, the run asks once. See **Reviewer** below. Both combine with `--quick`.
 
 ## Task folder
 
@@ -54,12 +56,42 @@ The user is saying: this is one obvious change, in code the task already names, 
 | 5 Validate | **Skipped.** |
 | 6 Checkpoint | **Skipped.** `--ask` has nothing to gate without a plan; if both flags are given, `--quick` wins and say so in the report. |
 | 7 Implement | You, in this thread, always. One commit unless the change is naturally two. Record what changed and any decision made under a `Notes` heading in `task.md`, since there is no plan to hold it. |
-| 8 Review | Same. This is the one Fable pass quick mode keeps, and on a small diff it is fast. |
+| 8 Review | Same. This is the one independent pass quick mode keeps, and on a small diff it is fast. `--quick --no-review` drops it too. |
 | 9–11 | Same. |
 
 **Bail-out.** Quick mode is a judgment about size, and the judgment can be wrong. Stop and tell the user this needs a full run when implementing turns into a **third distinct change**, touches code the task never named and you did not expect, or needs a design decision the DoD does not settle. Commit what is verified first, leave the worktree in place, and say what you found. Re-running without `--quick` on the same folder is then a resume: Step 0 sees the commits, Step 3 onward runs normally and the plan accounts for the work already done. Do not push through — the whole point of the flag is that it is cheap to be wrong about.
 
 Quick mode reports the same way as a full run. Spawn count and elapsed time are how the user learns whether the flag is paying off.
+
+## Reviewer (`--review=<who>`, `--no-review`)
+
+One choice covers both independent-angle passes — plan validation (Step 5) and the final review (Step 8). The point of choosing is to spend whichever quota has room, so both passes go to the same reviewer.
+
+| Value | Runs on | How |
+|---|---|---|
+| `fable` | Claude Fable | Spawn `dock:plan-validator` / `dock:reviewer` as written |
+| `sol` | Codex, `gpt-6.1-sol` | `codex exec`, see below |
+| `astra` | Codex, `gpt-6-astra` | `codex exec`, see below |
+| `none` (`--no-review`) | nobody | You do a self-check in-thread, see below |
+
+**Not given and not recorded → ask once**, in Step 1, with `AskUserQuestion` alongside the scout spawn: the four options above, `fable` first. This is the one question a run asks up front; it is a choice about spend, not about the task. Write the answer into `task.md` as `Review: <value>`. A resume reads it from there and never re-asks; a flag given on the resume overrides it.
+
+**Codex reviewers.** Same role, same brief, different runtime. Build one prompt file in the task folder: the body of the matching agent file in this plugin (`${CLAUDE_SKILL_DIR}/../../agents/plan-validator.md` or `reviewer.md`, frontmatter stripped), then the exact brief you would have given the subagent. Run it from the worktree, read-only, at the same medium effort the Fable agents use:
+
+```
+codex exec -m <model> -c model_reasoning_effort="medium" -s read-only --ephemeral \
+  -C <worktree> -o <task-folder>/<validation|review>.md - < <task-folder>/<prompt-file>
+```
+
+Run it in the background and wait for it to exit — a review can outlast a foreground timeout. The `-o` file is the report; treat it exactly as the subagent's report. If the command fails (not installed, quota, auth), do not silently fall back: ask the user which reviewer to use instead, and record the new value.
+
+**`none`.** The user is trading the independent angle for time and cost; do not substitute another reviewer.
+
+- **Step 5** — skipped. You re-read the plan once against `task.md` and `research.md` yourself before implementing.
+- **Step 8** — you do the pass in-thread: walk `{base}..HEAD` against every DoD bullet, and classify anything you find with the same origin table. Caused findings are still fixed in this PR. Be plain that this is a self-review: it catches unmet DoD bullets and leftovers, not the blind spots an independent reader exists to catch.
+- The PR body and the final report both state that no independent review ran, so the human reviewer knows they are the first second pair of eyes.
+
+Whichever reviewer ran, the PR body and the final report name it.
 
 ## Step 0 — Resume or clean up
 
@@ -78,7 +110,7 @@ Otherwise this is a fresh run. Continue.
 
 ## Step 1 — Frame the task
 
-Slug from the issue title or the prompt. Create the folder; write `task.md` from `templates/task.md`. Set `Mode` in the manifest to `quick` or `full`.
+Slug from the issue title or the prompt. Create the folder; write `task.md` from `templates/task.md`. Set `Mode` in the manifest to `quick` or `full`, and `Review` to the reviewer from the flag — or ask now if no flag was given (see **Reviewer**).
 
 - `$ARGUMENTS` matches `[A-Z]+-\d+` → fetch the issue with `linearis` (see the `linearis` skill for commands). Body verbatim into `task.md`, its acceptance criteria as the DoD.
 - Otherwise the prompt *is* the task; write goal and DoD yourself.
@@ -144,7 +176,9 @@ Spawn **`dock:plan-validator`** with the paths to `task.md`, `research.md`, `pla
 
 **You apply the fixes yourself.** Editing the plan is cheap text work and you own the document.
 
-Skipped under `--quick`. Otherwise, skip validation only when the plan has two or fewer phases and no open questions.
+With `Review: sol` or `astra`, run the same brief through `codex exec` instead (see **Reviewer**).
+
+Skipped under `--quick` and under `Review: none`. Otherwise, skip validation only when the plan has two or fewer phases and no open questions.
 
 ## Step 6 — Checkpoint (`--ask` only)
 
@@ -196,6 +230,8 @@ Spawn **`dock:reviewer`** on the accumulated diff against the DoD, **before the 
 
 Give it: `{base}..HEAD` (or the diff), the DoD from `task.md`, and `plan.md` (or, under `--quick`, the `Notes` from `task.md`). It reports; it does not edit.
 
+With `Review: sol` or `astra`, run the same brief through `codex exec` instead; with `Review: none`, do this pass yourself — see **Reviewer**. Everything below applies to the findings either way.
+
 Every finding has an origin, and the origin decides what happens to it. Severity does not: a low-severity finding the diff caused is fixed in this PR like any other.
 
 | Origin | What it is | What happens |
@@ -218,7 +254,7 @@ Run the full gate from the manifest **once**, then push. Record the SHA it passe
 
 ## Step 10 — PR
 
-Spawn **`dock:pr`** with base branch, head branch, the DoD, a summary of what shipped, the assumptions recorded in Step 6, any deviations, verification results, and **the task folder path** — so a later session can answer "why was this done this way" from the recorded decisions rather than the diff. It writes and opens the PR and returns the URL.
+Spawn **`dock:pr`** with base branch, head branch, the DoD, a summary of what shipped, the assumptions recorded in Step 6, any deviations, verification results, which reviewer ran (or that none did), and **the task folder path** — so a later session can answer "why was this done this way" from the recorded decisions rather than the diff. It writes and opens the PR and returns the URL.
 
 **Never merge it.** Record the URL in `task.md`. Move Linear to its review/preview state.
 
@@ -226,7 +262,7 @@ Spawn **`dock:pr`** with base branch, head branch, the DoD, a summary of what sh
 
 `ExitWorktree({action:"keep"})`. **Keep the worktree and the task folder** — the PR isn't merged, and review comments are coming.
 
-Tell the user: PR link, mode, phases completed, assumptions made, anything left unmet, how many subagents ran and roughly how long it took, and which ceiling stopped the run if one did.
+Tell the user: PR link, mode, which reviewer ran, phases completed, assumptions made, anything left unmet, how many subagents ran and roughly how long it took, and which ceiling stopped the run if one did.
 
 There is no general "remaining" or "found along the way" list. Everything not shipped is one of three things, and is reported as that: **unmet** (a DoD bullet or a caused finding, with the reason), **filed** (a decision, with its issue link), or **pre-existing** (with its issue link if one was filed). A sentence suggesting something "could be its own issue" means the issue was not filed, and that is the step that was skipped. Note that merging the PR and re-running `/dock:ship` moves the issue to done and cleans up.
 

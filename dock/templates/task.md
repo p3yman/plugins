@@ -6,6 +6,7 @@
 |---|---|
 | Slug | `{YYYY-MM-DD}-{slug}` |
 | Mode | `full` / `quick` |
+| Review | `fable` / `sol` / `astra` / `none` |
 | Issue | `{KEY}` / none |
 | Repo | `{path}` |
 | Base branch | `{base}` |
